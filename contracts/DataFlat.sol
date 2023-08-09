@@ -454,6 +454,17 @@ contract SwapData is AccessControl {
         return listings;
     }
 
+    function readListingsByIndex(
+        uint256 start,
+        uint256 end
+    ) external view returns (SwapListing[] memory) {
+        SwapListing[] memory listings = new SwapListing[](end - start + 1);
+        for (uint256 i = start; i <= end; i++) {
+            listings[i - start] = _listings[i];
+        }
+        return listings;
+    }
+
     function readAllOffers() external view returns (SwapOffer[] memory) {
         SwapOffer[] memory swapOffers = new SwapOffer[](
             _offerIdTracker.current() - 1
@@ -464,12 +475,34 @@ contract SwapData is AccessControl {
         return swapOffers;
     }
 
+    function readOffersByIndex(
+        uint256 start,
+        uint256 end
+    ) external view returns (SwapOffer[] memory) {
+        SwapOffer[] memory listings = new SwapOffer[](end - start + 1);
+        for (uint256 i = start; i <= end; i++) {
+            listings[i - start] = _offers[i];
+        }
+        return listings;
+    }
+
     function readAllTrades() external view returns (Trade[] memory) {
         Trade[] memory trades = new Trade[](_tradeIdTracker.current() - 1);
         for (uint256 i = 0; i < trades.length; i++) {
             trades[i] = _trades[i + 1];
         }
         return trades;
+    }
+
+    function readTradesByIndex(
+        uint256 start,
+        uint256 end
+    ) external view returns (Trade[] memory) {
+        Trade[] memory listings = new Trade[](end - start + 1);
+        for (uint256 i = start; i <= end; i++) {
+            listings[i - start] = _trades[i];
+        }
+        return listings;
     }
 
     function grantWriterRole(address to) external {
