@@ -419,6 +419,7 @@ contract OctoplaceMarket is ReentrancyGuard {
         _itemsSold.increment();
 
         IERC721(nftContract).transferFrom(address(this), msg.sender, tokenId);
+        _returnOfferTokens(itemId);
 
         // Calculate Payouts
         uint256 feePayout = ((msg.value / 10000) *
@@ -485,6 +486,7 @@ contract OctoplaceMarket is ReentrancyGuard {
             idToMarketItem[itemId].seller,
             tokenId
         );
+        _returnOfferTokens(itemId);
 
         _itemsSold.increment();
 
@@ -521,6 +523,9 @@ contract OctoplaceMarket is ReentrancyGuard {
             tokenId
         );
 
+        // Added
+        _returnOfferTokens(itemId);
+
         _itemsSold.increment();
 
         // Through event
@@ -542,42 +547,47 @@ contract OctoplaceMarket is ReentrancyGuard {
         uint256 itemId,
         uint256 offerPrice
     ) public nonReentrant {
-        require(idToMarketItem[itemId].isSold == false, "Item is already sold");
-        require(
-            idToMarketItem[itemId].nftContract == nftContract,
-            "Not correct NFT address"
-        );
+        MarketItem memory item = idToMarketItem[itemId];
+        require(item.isSold == false, "Item is already sold");
+        require(item.nftContract == nftContract, "Not correct NFT address");
 
         uint256 allowance = IERC20(WTFuel).allowance(msg.sender, address(this));
-        uint256 highestOffer = idToMarketItem[itemId].highestOffer;
+        uint256 highestOffer = item.highestOffer;
 
         require(
             allowance >= offerPrice,
             "Allowance of TNT20 token is not big enough"
         );
-        if (
-            IERC20(WTFuel).allowance(
-                idToMarketItem[itemId].bidder,
-                address(this)
-            ) >= highestOffer
-        ) {
-            require(highestOffer < offerPrice, "Not highest offer");
-        }
+        require(highestOffer < offerPrice, "Not highest offer");
+
 
         // set in marketItem
+        _returnOfferTokens(itemId);
+        IERC20 WTFuelToken = IERC20(WTFuel);
+        WTFuelToken.transferFrom(msg.sender, address(this), offerPrice);
         idToMarketItem[itemId].highestOffer = offerPrice;
         idToMarketItem[itemId].bidder = payable(msg.sender);
 
         emit OfferPlaced(
             itemId,
             nftContract,
-            idToMarketItem[itemId].tokenId,
-            idToMarketItem[itemId].seller,
+            item.tokenId,
+            item.seller,
             offerPrice,
-            idToMarketItem[itemId].bidder,
-            idToMarketItem[itemId].category,
-            idToMarketItem[itemId].price
+            item.bidder,
+            item.category,
+            item.price
         );
+    }
+
+    // Return tokens locked back to offerer
+    function _returnOfferTokens(uint256 itemId) internal {
+        if (idToMarketItem[itemId].bidder != address(0)) {
+            IERC20(WTFuel).transfer(
+                idToMarketItem[itemId].bidder,
+                idToMarketItem[itemId].highestOffer
+            );
+        }
     }
 
     function acceptMarketItemOfferTNT20(
@@ -660,8 +670,8 @@ contract OctoplaceMarket is ReentrancyGuard {
 
         MarketItem memory item = idToMarketItem[itemId];
         // Payout to user and feeAddress (opentheta)
-        require(IERC20(WTFuel).transferFrom(bidder, item.seller, userPayout));
-        require(IERC20(WTFuel).transferFrom(bidder, feeAddress, feePayout));
+        require(IERC20(WTFuel).transfer(item.seller, userPayout));
+        require(IERC20(WTFuel).transfer(feeAddress, feePayout));
 
         // Through events
         emit MarketItemSale(
@@ -692,6 +702,7 @@ contract OctoplaceMarket is ReentrancyGuard {
         );
         require(idToMarketItem[itemId].isSold == false, "Item is already sold");
 
+        _returnOfferTokens(itemId);
         idToMarketItem[itemId].highestOffer = 0;
         idToMarketItem[itemId].bidder = address(0x0);
 

@@ -1,4 +1,5 @@
 import hre, { ethers, upgrades, network } from 'hardhat';
+import { getContractAddress } from '@ethersproject/address';
 import fs from 'fs';
 import { getImplementationAddressFromProxy } from '@openzeppelin/upgrades-core';
 import dotenv from 'dotenv';
@@ -12,8 +13,14 @@ async function main() {
   const accounts = await hre.ethers.getSigners();
   const deployer = accounts[0];
 
+  const transactionCount = deployer.getTransactionCount();
+  const futureSwapNFTAddress = getContractAddress({
+    from: deployer.address,
+    nonce: transactionCount + 1
+  });
+
   const SwapDataFactory = await ethers.getContractFactory('SwapData');
-  const SwapDataProxy = await upgrades.deployProxy(SwapDataFactory, [deployer.address, deployer.address], {
+  const SwapDataProxy = await upgrades.deployProxy(SwapDataFactory, [deployer.address, futureSwapNFTAddress], {
     initializer: 'initialize',
     kind: 'transparent',
   });

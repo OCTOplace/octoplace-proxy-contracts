@@ -59,7 +59,7 @@ contract SwapNFT is AccessControlUpgradeable {
             _msgSender(),
             address(this)
         );
-        require(msg.value >= txCharge, "Insufficient tfuel sent for txCharge");
+        require(msg.value == txCharge, "Insufficient tfuel sent for txCharge");
         require(
             isApproved,
             "Approval is required for Swap Contract before listing."
@@ -169,6 +169,16 @@ contract SwapNFT is AccessControlUpgradeable {
         require(!listing.isCompleted && !offer.isCompleted, "Invalid request.");
         require(!listing.isCancelled && !offer.isCancelled, "Invalid Request.");
         require(!offer.isDeclined, "Invalid Request");
+        bool isOfferTokenApproved = offerContract.isApprovedForAll(
+            offer.offerTokenOwner,
+            address(this)
+        );
+        bool isListingTokenApproved = listingContract.isApprovedForAll(
+            offer.offerTokenOwner,
+            address(this)
+        );
+        require(isOfferTokenApproved && isListingTokenApproved, "not approved");
+
         offerContract.transferFrom(
             offer.offerTokenOwner,
             offer.listingTokenOwner,
